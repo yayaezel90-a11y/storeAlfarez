@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>ALFAREZ STORE - Real-Time Reseller</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; 
+            background: radial-gradient(ellipse at 20% 30%, #0a0f1a, #020408); 
+            color: #eef5ff; 
+            padding: 20px; 
+            min-height: 100vh; 
+            overflow-x: hidden;
+        }
+        .container { max-width: 1600px; margin: 0 auto; position: relative; z-index: 1; }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes glowPulse { 0% { box-shadow: 0 0 5px rgba(0,255,136,0.3); } 100% { box-shadow: 0 0 25px rgba(0,255,136,0.7); } }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .card { background: rgba(12, 18, 32, 0.85); backdrop-filter: blur(16px); border-radius: 32px; padding: 28px; margin-bottom: 28px; border: 1px solid rgba(0, 255, 136, 0.25); animation: fadeInUp 0.5s ease-out; transition: all 0.3s; }
+        .card:hover { border-color: rgba(0, 255, 136, 0.6); transform: translateY(-2px); }
+        
+        button { background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s ease; margin: 5px; }
+        button:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(0,255,136,0.4); }
+        
+        .btn-danger { background: linear-gradient(135deg, #ff3366, #cc0044); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #ffaa33, #ff8800); color: white; }
+        .btn-info { background: linear-gradient(135deg, #33aaff, #0088cc); color: white; }
+        
+        input, select, textarea { background: #0f1522; border: 1px solid #2a3448; padding: 12px 18px; border-radius: 24px; color: white; width: 100%; margin: 8px 0; font-size: 14px; transition: 0.3s; }
+        input:focus { border-color: #00ff88; outline: none; box-shadow: 0 0 12px rgba(0,255,136,0.3); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; }
+        .grid-mini { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        
+        .cheat-card { background: linear-gradient(145deg, #0f1625, #090e18); border-radius: 28px; overflow: visible; border: 1px solid #2a3a4a; transition: all 0.4s ease; cursor: pointer; margin-bottom: 10px; }
+        .cheat-card:hover { border-color: #00ff88; transform: translateY(-6px) scale(1.02); }
+        .cheat-header { background: rgba(0, 255, 136, 0.12); padding: 20px; font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+        .cheat-body { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .cheat-card.active .cheat-body { max-height: 550px; overflow-y: visible; }
+        .cheat-body-inner { padding: 20px; border-top: 1px solid #1e2a3a; }
+        .duration-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #1e2a3a; flex-wrap: wrap; gap: 10px; }
+        .price { font-size: 20px; font-weight: 800; color: #00ff88; }
+        
+        .top-navbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; position: relative; z-index: 100; }
+        .brand { display: flex; align-items: center; gap: 20px; }
+        .brand-logo { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #00ff88, #00cc66); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .user-menu-wrapper { position: relative; display: inline-block; z-index: 9999; }
+        .user-menu-btn { background: rgba(0,255,136,0.15); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; border: 1px solid rgba(0,255,136,0.5); }
+        .user-menu-btn:hover { background: rgba(0,255,136,0.35); transform: rotate(180deg); }
+        .user-dropdown { position: absolute; top: 55px; left: 0; background: rgba(10, 15, 25, 0.98); backdrop-filter: blur(20px); border-radius: 24px; padding: 12px; z-index: 99999; border: 1px solid #00ff88; display: none; min-width: 260px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .user-dropdown a { display: block; padding: 12px 20px; color: white; text-decoration: none; border-radius: 16px; transition: 0.2s; font-size: 14px; }
+        .user-dropdown a:hover { background: #00ff8822; transform: translateX(8px); color: #00ff88; }
+        .user-dropdown i { width: 28px; margin-right: 12px; color: #00ff88; }
+        
+        .balance-badge { background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; padding: 10px 26px; border-radius: 50px; font-weight: 800; display: inline-flex; align-items: center; gap: 10px; animation: glowPulse 2s infinite alternate; }
+        .action-buttons { display: flex; gap: 10px; }
+        .admin-badge { background: linear-gradient(135deg, #ff3366, #cc0044); padding: 4px 14px; border-radius: 40px; font-size: 11px; margin-left: 10px; }
+        
+        .announcement-banner { background: linear-gradient(135deg, #ffaa33, #ff8800); color: #000; padding: 12px 20px; border-radius: 60px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; animation: pulse 2s infinite; }
+        
+        .notif-badge { display: inline-flex; align-items: center; justify-content: center; background: #ff3366; color: white; border-radius: 50%; min-width: 22px; height: 22px; font-size: 11px; font-weight: bold; padding: 0 6px; margin-left: 8px; animation: pulse 1s infinite; }
+        
+        .admin-menu-wrapper { position: fixed; top: 20px; right: 20px; z-index: 10000; }
+        .admin-menu-btn { background: linear-gradient(135deg, #1a2a3a, #0f1a25); border: 1px solid rgba(0,255,136,0.5); border-radius: 60px; padding: 12px 28px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(10px); font-weight: 700; }
+        .admin-menu-btn:hover { background: linear-gradient(135deg, #00ff8822, #00cc6622); border-color: #00ff88; transform: translateY(-3px); }
+        .admin-menu-btn i { font-size: 18px; color: #00ff88; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .admin-dropdown { position: absolute; top: 60px; right: 0; background: rgba(10, 15, 25, 0.98); backdrop-filter: blur(20px); border-radius: 28px; padding: 16px; z-index: 10000; border: 1px solid #00ff88; display: none; min-width: 300px; max-height: 80vh; overflow-y: auto; }
+        .admin-dropdown .menu-divider { border-top: 1px solid rgba(0,255,136,0.3); margin: 8px 0; font-size: 11px; color: #00ff88; padding: 5px 10px; letter-spacing: 1px; }
+        .admin-dropdown a { display: block; padding: 10px 20px; color: white; text-decoration: none; border-radius: 18px; transition: 0.2s; margin: 4px 0; font-size: 13px; }
+        .admin-dropdown a:hover { background: #00ff8822; transform: translateX(8px); color: #00ff88; }
+        .admin-dropdown i { width: 28px; margin-right: 10px; color: #00ff88; }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.97); display: flex; align-items: center; justify-content: center; z-index: 20000; animation: fadeInUp 0.3s ease; }
+        .modal-content { background: #0f1625; max-width: 850px; width: 90%; border-radius: 48px; padding: 32px; border: 1px solid #00ff88; max-height: 85vh; overflow-y: auto; }
+        
+        .payment-option { background: #0a101c; border-radius: 24px; padding: 15px; margin: 10px 0; cursor: pointer; border: 1px solid #2a3448; transition: 0.3s; display: flex; align-items: center; gap: 15px; }
+        .payment-option.selected { border-color: #00ff88; background: #00ff8815; }
+        
+        .admin-table { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(0,255,136,0.1); padding: 14px 12px; text-align: left; font-weight: 700; color: #00ff88; }
+        td { padding: 12px 12px; border-bottom: 1px solid #1e2a3a; }
+        .status-pending { color: #ffaa33; background: #ffaa3310; padding: 4px 12px; border-radius: 20px; display: inline-block; font-size: 12px; }
+        .status-approved { color: #00ff88; background: #00ff8810; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+        
+        .admin-stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+        .stat-card { background: linear-gradient(145deg, #0f1625, #090e18); border-radius: 24px; padding: 18px 28px; border: 1px solid rgba(0,255,136,0.25); text-align: center; }
+        .stat-card:hover { transform: translateY(-5px); border-color: #00ff88; }
+        .stat-number { font-size: 32px; font-weight: 800; color: #00ff88; }
+        
+        .key-item { background: #0a101c; border-radius: 20px; padding: 16px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border: 1px solid #2a3448; }
+        .key-code { font-family: monospace; font-size: 17px; font-weight: bold; color: #00ff88; background: #00000030; padding: 8px 18px; border-radius: 16px; }
+        .copy-btn { background: #1e2a3a; padding: 6px 16px; border-radius: 30px; }
+        .countdown { font-size: 12px; margin-top: 6px; font-weight: 600; }
+        .countdown.urgent { color: #ffaa33; }
+        .countdown.expired { color: #ff3366; }
+        .countdown.valid { color: #00ff88; }
+        
+        .auth-toggle { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; }
+        .auth-toggle span { cursor: pointer; padding: 10px 32px; border-radius: 50px; font-weight: 600; background: #0a101c; transition: 0.3s; }
+        .auth-toggle .active { background: #00ff88; color: #000; }
+        .auth-panel { display: none; animation: fadeInUp 0.3s ease; }
+        .auth-panel.active { display: block; }
+        
+        .toast { position: fixed; bottom: 30px; right: 30px; background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; padding: 14px 28px; border-radius: 60px; font-weight: bold; z-index: 30000; animation: fadeInUp 0.3s; box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        
+        .date-input-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+        .date-input-group input { width: calc(25% - 10px); margin: 0; }
+        
+        .stats-mini-card { background: rgba(0,255,136,0.1); border-radius: 20px; padding: 16px; text-align: center; transition: 0.3s; }
+        .stats-mini-card:hover { transform: translateY(-3px); background: rgba(0,255,136,0.15); }
+        .stats-number { font-size: 28px; font-weight: 800; color: #00ff88; }
+        
+        @media (max-width: 760px) { 
+            .grid { grid-template-columns: 1fr; } 
+            body { padding: 12px; } 
+            .admin-menu-btn { padding: 8px 18px; }
+            .top-navbar { flex-direction: column; align-items: stretch; }
+            .brand { justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="announcementBanner"></div>
+    <div id="navbar"></div>
+    <div id="mainContent" style="text-align:center; padding:80px;"><i class="fas fa-crown" style="font-size:50px; color:#00ff88; animation: float 1s infinite;"></i><br>Loading ALFAREZ STORE...</div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCK6nJVhZsKyCsZTA8WTHd6GrMWLhre4x8",
+        authDomain: "alfarez-store.firebaseapp.com",
+        databaseURL: "https://alfarez-store-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "alfarez-store",
+        storageBucket: "alfarez-store.firebasestorage.app",
+        messagingSenderId: "6597679144",
+        appId: "1:6597679144:web:1ed2f007ae082033157d1d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    let currentUser = null;
+    let selectedPayment = null;
+    let currentAdminSection = 'dashboard';
+    let pendingCount = { topup: 0, purchase: 0 };
+    
+    let CHEATS = {
+        "Drip (ANDROID)": { "1day": 25000, "3day": 35000, "7day": 70000, "15day": 125000, "30day": 220000 },
+        "HG (ANDROID)": { "1day": 30000, "3day": 50000, "7day": 80000, "15day": 135000, "30day": 260000 },
+        "Flourite (IPHONE)": { "1day": 50000, "7day": 150000, "30day": 380000 }
+    };
+    
+    const PAYMENTS = { "GoPay": { number: "087760337535", icon: "fa-wallet" }, "Dana": { number: "087760337535", icon: "fa-mobile-alt" } };
+    
+    function showToast(msg) { 
+        const t = document.createElement('div'); 
+        t.className = 'toast'; 
+        t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; 
+        document.body.appendChild(t); 
+        setTimeout(() => t.remove(), 3000); 
+    }
+    
+    function getTimeRemaining(expiredDateStr) {
+        if (!expiredDateStr) return { text: "Tidak ada tanggal", class: "expired" };
+        const expired = new Date(expiredDateStr);
+        const now = new Date();
+        const diff = expired - now;
+        if (diff <= 0) return { text: "⏰ EXPIRED", class: "expired" };
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (86400000)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (3600000)) / (1000 * 60));
+        let text = "";
+        if (days > 0) text = `⏳ Sisa ${days} hari ${hours} jam`;
+        else if (hours > 0) text = `⚠️ Sisa ${hours} jam ${minutes} menit`;
+        else text = `🔥 Sisa ${minutes} menit`;
+        return { text, class: days > 0 ? "valid" : "urgent" };
+    }
+    
+    async function initDB() {
+        const snap = await db.ref('users').once('value');
+        if (!snap.exists()) {
+            await db.ref('users/alfarez').set({ username: 'alfarez', password: '301123', balance: 9999999, role: 'admin' });
+            await db.ref('users/demo').set({ username: 'demo', password: 'demo123', balance: 500000, role: 'user' });
+        }
+        const cheatSnap = await db.ref('cheat_prices').once('value');
+        if (!cheatSnap.exists()) await db.ref('cheat_prices').set(CHEATS);
+        else CHEATS = cheatSnap.val();
+    }
+    
+    async function refreshBalance() {
+        if (!currentUser) return 0;
+        const snap = await db.ref(`users/${currentUser.username}`).once('value');
+        if (snap.val()) currentUser.balance = snap.val().balance || 0;
+        return currentUser.balance;
+    }
+    
+    async function loadAnnouncement() {
+        const ann = (await db.ref('announcement').once('value')).val();
+        const bannerDiv = document.getElementById('announcementBanner');
+        if (ann && currentUser && currentUser.role !== 'admin') {
+            bannerDiv.innerHTML = `<div class="announcement-banner"><i class="fas fa-bullhorn"></i> 📢 PENGUMUMAN: ${ann}</div>`;
+        } else {
+            bannerDiv.innerHTML = '';
+        }
+    }
+    
+    async function updatePendingCounts() {
+        if (!currentUser || currentUser.role !== 'admin') return;
+        const purchasesSnap = await db.ref('purchases').once('value');
+        const transactionsSnap = await db.ref('transactions').once('value');
+        let purchasePending = 0, topupPending = 0;
+        purchasesSnap.forEach(c => { if (c.val().status === 'pending') purchasePending++; });
+        transactionsSnap.forEach(c => { if (c.val().status === 'pending') topupPending++; });
+        pendingCount.purchase = purchasePending;
+        pendingCount.topup = topupPending;
+        renderAdminMenuBadge();
+    }
+    
+    function renderAdminMenuBadge() {
+        const adminBtn = document.querySelector('.admin-menu-btn');
+        if (!adminBtn) return;
+        const total = pendingCount.purchase + pendingCount.topup;
+        let existingBadge = document.getElementById('adminNotifBadge');
+        if (total > 0) {
+            if (!existingBadge) {
+                const badge = document.createElement('span');
+                badge.id = 'adminNotifBadge';
+                badge.className = 'notif-badge';
+                badge.innerText = total;
+                adminBtn.appendChild(badge);
+            } else {
+                existingBadge.innerText = total;
+            }
+        } else if (existingBadge) {
+            existingBadge.remove();
+        }
+    }
+    
+    // REALTIME LISTENER untuk admin
+    function setupRealtimeListeners() {
+        if (!currentUser || currentUser.role !== 'admin') return;
+        
+        db.ref('purchases').on('value', () => {
+            updatePendingCounts();
+            if (currentAdminSection === 'dashboard' || currentAdminSection === 'purchases' || currentAdminSection === 'topup') {
+                renderAdminDashboard();
+            }
+        });
+        db.ref('transactions').on('value', () => {
+            updatePendingCounts();
+            if (currentAdminSection === 'dashboard' || currentAdminSection === 'purchases' || currentAdminSection === 'topup') {
+                renderAdminDashboard();
+            }
+        });
+        db.ref('users').on('value', () => {
+            if (currentAdminSection === 'dashboard' || currentAdminSection === 'balance' || currentAdminSection === 'viewuser') {
+                renderAdminDashboard();
+            }
+        });
+    }
+    
+    async function renderNavbar() {
+        const navDiv = document.getElementById('navbar');
+        if (currentUser) {
+            await refreshBalance();
+            await loadAnnouncement();
+            navDiv.innerHTML = `
+                <div class="top-navbar">
+                    <div class="brand">
+                        ${currentUser.role !== 'admin' ? `
+                        <div class="user-menu-wrapper">
+                            <div class="user-menu-btn" onclick="event.stopPropagation(); toggleUserMenu()"><i class="fas fa-bars" style="font-size:20px; color:#00ff88;"></i></div>
+                            <div id="userDropdown" class="user-dropdown">
+                                <a href="#" onclick="showDashboard(); return false;"><i class="fas fa-home"></i> 🏠 Dashboard</a>
+                                <a href="#" onclick="showCheatMenu(); return false;"><i class="fas fa-gamepad"></i> 🎮 Menu Cheat</a>
+                                <a href="#" onclick="showMyKeys(); return false;"><i class="fas fa-key"></i> 🔑 Key Saya</a>
+                                <a href="#" onclick="showHistory(); return false;"><i class="fas fa-history"></i> 📜 Riwayat</a>
+                                <a href="#" onclick="showWishlist(); return false;"><i class="fas fa-heart"></i> ❤️ Wishlist</a>
+                                <a href="#" onclick="showStats(); return false;"><i class="fas fa-chart-line"></i> 📊 Statistik</a>
+                                <a href="#" onclick="showLeaderboard(); return false;"><i class="fas fa-trophy"></i> 🏆 Leaderboard</a>
+                                <a href="#" onclick="showKeyCalculator(); return false;"><i class="fas fa-calculator"></i> 🧮 Kalkulator</a>
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div><i class="fas fa-crown" style="color:#00ff88;"></i> <strong class="brand-logo" style="font-size:22px;">ALFAREZ STORE</strong> <span style="font-size:12px;">${currentUser.username} ${currentUser.role === 'admin' ? '<span class="admin-badge">ADMIN</span>' : ''}</span></div>
+                    </div>
+                    <div><span class="balance-badge"><i class="fas fa-coins"></i> Rp ${(currentUser.balance || 0).toLocaleString()}</span></div>
+                    <div class="action-buttons"><button class="topup-btn" onclick="showTopupPage()" style="background:linear-gradient(135deg,#ff8800,#ff5500);"><i class="fas fa-wallet"></i> Topup</button><button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
+                </div>
+            `;
+        } else {
+            navDiv.innerHTML = `<div class="card" style="text-align:center; padding:28px;"><i class="fas fa-crown" style="font-size:45px; color:#00ff88;"></i> <strong style="font-size:28px;">ALFAREZ STORE</strong><br><span style="font-size:14px;">Drip • HG • Flourite | Official Reseller</span></div>`;
+        }
+    }
+    
+    window.toggleUserMenu = function() { 
+        const m = document.getElementById('userDropdown'); 
+        if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; 
+    };
+    
+    // Menu Functions
+    window.showDashboard = async function() {
+        const purchases = []; 
+        await db.ref('purchases').once('value').then(s => s.forEach(c => { const p = c.val(); if (p.user_id === currentUser.username) purchases.push(p); }));
+        const totalSpent = purchases.reduce((s, p) => s + (p.price || 0), 0);
+        const approved = purchases.filter(p => p.status === 'approved').length;
+        const pending = purchases.filter(p => p.status === 'pending').length;
+        document.getElementById('mainContent').innerHTML = `
+            <div class="card"><h2><i class="fas fa-chart-line"></i> Dashboard ${currentUser.username}</h2></div>
+            <div class="grid-mini">
+                <div class="stats-mini-card"><div class="stats-number">Rp ${totalSpent.toLocaleString()}</div><div>Total Belanja</div></div>
+                <div class="stats-mini-card"><div class="stats-number">${approved}</div><div>Key Aktif</div></div>
+                <div class="stats-mini-card"><div class="stats-number">${pending}</div><div>Pending</div></div>
+                <div class="stats-mini-card"><div class="stats-number">${purchases.length}</div><div>Transaksi</div></div>
+            </div>
+        `;
+        document.getElementById('userDropdown').style.display = 'none';
+    };
+    
+    window.showCheatMenu = function() { renderUserDashboard(); document.getElementById('userDropdown').style.display = 'none'; };
+    
+    window.showLeaderboard = async function() {
+        const users = (await db.ref('users').once('value')).val() || {};
+        let leaderboard = [];
+        for (let [un, u] of Object.entries(users)) {
+            if (un !== 'alfarez') {
+                const purchases = []; 
+                await db.ref('purchases').once('value').then(s => s.forEach(c => { const p = c.val(); if (p.user_id === un && p.status === 'approved') purchases.push(p); }));
+                const totalSpent = purchases.reduce((s, p) => s + (p.price || 0), 0);
+                leaderboard.push({ username: un, total: totalSpent });
+            }
+        }
+        leaderboard.sort((a, b) => b.total - a.total);
+        let html = `<div class="modal" id="leaderboardModal"><div class="modal-content"><h2><i class="fas fa-trophy"></i> Leaderboard Top Spender</h2><div class="admin-table">\n<table><thead><tr><th>Rank</th><th>User</th><th>Total Belanja</th></tr></thead><tbody>`;
+        leaderboard.slice(0, 10).forEach((item, idx) => {
+            let rankClass = idx === 0 ? 'rank-1' : (idx === 1 ? 'rank-2' : (idx === 2 ? 'rank-3' : ''));
+            html += `<tr><td class="${rankClass}">${idx + 1}</td><td>${item.username}</td><td>Rp ${item.total.toLocaleString()}</td></tr>`;
+        });
+        html += `</tbody></table></div><button onclick="closeModal()" class="btn-info">Tutup</button></div></div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('userDropdown').style.display = 'none';
+    };
+    
+    window.showKeyCalculator = async function() {
+        const buys = [];
+        await db.ref('purchases').once('value').then(s => s.forEach(c => { const p = c.val(); if (p.user_id === currentUser.username && p.status === 'approved' && p.key_given) buys.push(p); }));
+        if (buys.length === 0) { alert("Belum ada key yang diberikan admin!"); return; }
+        let html = `<div class="modal" id="calcModal"><div class="modal-content"><h2><i class="fas fa-calculator"></i> Kalkulator Sisa Key</h2><div class="admin-table"><table><thead><tr><th>Produk</th><th>Durasi</th><th>Key</th><th>Sisa Waktu</th></tr></thead><tbody>`;
+        buys.forEach(p => {
+            const timeLeft = getTimeRemaining(p.expired_date);
+            html += `<tr><td>${p.product}</td><td>${p.duration}</td><td><span class="key-code">${p.key_given}</span></td><td class="${timeLeft.class}">${timeLeft.text}</td></tr>`;
+        });
+        html += `</tbody></table></div><button onclick="closeModal()" class="btn-info">Tutup</button></div></div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('userDropdown').style.display = 'none';
+    };
+    
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('userDropdown');
+        const btn = document.querySelector('.user-menu-btn');
+        if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) menu.style.display = 'none';
+        const adminMenu = document.getElementById('adminDropdown');
+        const adminBtn = document.querySelector('.admin-menu-btn');
+        if (adminMenu && adminBtn && !adminBtn.contains(e.target) && !adminMenu.contains(e.target)) adminMenu.style.display = 'none';
+    });
+    
+    window.showStats = async function() {
+        const purchases = []; await db.ref('purchases').once('value').then(s => s.forEach(c => { const p = c.val(); if (p.user_id === currentUser.username) purchases.push(p); }));
+        const totalSpent = purchases.reduce((s, p) => s + (p.price || 0), 0);
+        const approved = purchases.filter(p => p.status === 'approved').length;
+        const pending = purchases.filter(p => p.status === 'pending').length;
+        alert(`📊 Statistik Akun ${currentUser.username}\n\n💰 Total Belanja: Rp ${totalSpent.toLocaleString()}\n✅ Key Aktif: ${approved}\n⏳ Menunggu: ${pending}\n🎮 Total Transaksi: ${purchases.length}`);
+        document.getElementById('userDropdown').style.display = 'none';
+    };
+    
+    window.showWishlist = async function() {
+        const w = (await db.ref(`wishlist/${currentUser.username}`).once('value')).val() || [];
+        if (w.length === 0) { alert("Wishlist kosong! Klik ❤️ di cheat untuk menambah."); return; }
+        let h = `<div class="modal" id="wishlistModal"><div class="modal-content"><h2><i class="fas fa-heart" style="color:#ff3366;"></i> Wishlist</h2>`;
+        w.forEach(i => { h += `<div class="key-item"><div><strong>${i.product}</strong> - ${i.duration}<br>Rp ${i.price.toLocaleString()}</div><button onclick="buyFromWishlist('${i.product}', '${i.duration}', ${i.price})" style="background:#00ff88;">Beli</button></div>`; });
+        h += `<button onclick="closeModal()" class="btn-info">Tutup</button></div></div>`;
+        document.body.insertAdjacentHTML('beforeend', h);
+        document.getElementById('userDropdown').style.display = 'none';
+    };
+    
+    window.buyFromWishlist = function(p,d,pr) { closeModal(); setTimeout(() => showBuyForm(p,d,pr), 100); };
+    window.toggleWishlist = async function(p,d,pr,btn) {
+        const ref = db.ref(`wishlist/${currentUser.username}`); 
+        const snap = await ref.once('value'); 
+        let items = snap.val() || [];
+        const exists = items.some(i => i.product === p && i.duration === d);
+        if (exists) { 
+            items = items.filter(i => !(i.product === p && i.duration === d)); 
+            showToast("Dihapus dari wishlist"); 
+            btn.classList.remove('active'); 
+        } else { 
+            items.push({ product: p, duration: d, price: pr }); 
+            showToast("Ditambahkan ke wishlist"); 
+            btn.classList.add('active'); 
+        }
+        await ref.set(items);
+    };
+    
+    // ADMIN MENU
+    function renderAdminMenu() {
+        if (!currentUser || currentUser.role !== 'admin') return '';
+        const totalPending = pendingCount.purchase + pendingCount.topup;
+        return `
+            <div class="admin-menu-wrapper">
+                <div class="admin-menu-btn" onclick="toggleAdminDropdown()">
+                    <i class="fas fa-cog fa-spin"></i>
+                    <span>ADMIN MENU</span>
+                    ${totalPending > 0 ? `<span class="notif-badge" id="adminNotifBadge">${totalPending}</span>` : ''}
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="adminDropdown" class="admin-dropdown">
+                    <div class="menu-divider">━━━━━━━━━ MAIN ━━━━━━━━━</div>
+                    <a href="#" onclick="switchSection('dashboard');"><i class="fas fa-tachometer-alt"></i> 📊 Dashboard</a>
+                    <a href="#" onclick="switchSection('sendkey');"><i class="fas fa-key"></i> 🔑 Kirim Key</a>
+                    <a href="#" onclick="switchSection('topup');"><i class="fas fa-wallet"></i> 💰 Request Topup ${pendingCount.topup > 0 ? `<span class="notif-badge">${pendingCount.topup}</span>` : ''}</a>
+                    <a href="#" onclick="switchSection('purchases');"><i class="fas fa-shopping-cart"></i> 🛒 Pembelian ${pendingCount.purchase > 0 ? `<span class="notif-badge">${pendingCount.purchase}</span>` : ''}</a>
+                    <a href="#" onclick="switchSection('prices');"><i class="fas fa-dollar-sign"></i> 💲 Setting Harga</a>
+                    <div class="menu-divider">━━━━━━━━━ MANAJEMEN ━━━━━━━━━</div>
+                    <a href="#" onclick="switchSection('balance');"><i class="fas fa-coins"></i> ➕ Tambah/Hapus Saldo</a>
+                    <a href="#" onclick="switchSection('deleteuser');"><i class="fas fa-user-times"></i> 🗑 Hapus User</a>
+                    <a href="#" onclick="switchSection('resetpassword');"><i class="fas fa-key"></i> 🔐 Reset Password</a>
+                    <a href="#" onclick="switchSection('viewuser');"><i class="fas fa-users"></i> 👥 Detail User</a>
+                    <div class="menu-divider">━━━━━━━━━ DATA ━━━━━━━━━</div>
+                    <a href="#" onclick="switchSection('logs');"><i class="fas fa-scroll"></i> 📜 Log Aktivitas</a>
+                    <a href="#" onclick="switchSection('history');"><i class="fas fa-history"></i> 📋 Riwayat</a>
+                    <a href="#" onclick="switchSection('stats');"><i class="fas fa-chart-pie"></i> 📈 Statistik</a>
+                    <a href="#" onclick="switchSection('exportdata');"><i class="fas fa-file-excel"></i> 📊 Export Data</a>
+                    <div class="menu-divider">━━━━━━━━━ TOOLS ━━━━━━━━━</div>
+                    <a href="#" onclick="switchSection('calculator');"><i class="fas fa-calculator"></i> 🧮 Kalkulator</a>
+                    <a href="#" onclick="switchSection('broadcast');"><i class="fas fa-broadcast-tower"></i> 📱 Broadcast</a>
+                    <a href="#" onclick="switchSection('announcement');"><i class="fas fa-bullhorn"></i> 📢 Pengumuman</a>
+                    <a href="#" onclick="switchSection('settings');"><i class="fas fa-sliders-h"></i> ⚙️ Settings</a>
+                </div>
+            </div>
+        `;
+    }
+    
+    window.toggleAdminDropdown = function() { 
+        const m = document.getElementById('adminDropdown'); 
+        if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block'; 
+    };
+    window.switchSection = function(s) { 
+        currentAdminSection = s; 
+        document.getElementById('adminDropdown').style.display = 'none'; 
+        renderAdminDashboard(); 
+    };
+    
+    async function renderAdminDashboard() {
+        const users = (await db.ref('users').once('value')).val() || {};
+        const purchases = []; 
+        await db.ref('purchases').once('value').then(s => s.forEach(c => purchases.push({ id: c.key, ...c.val() })));
+        const transactions = []; 
+        await db.ref('transactions').once('value').then(s => s.forEach(c => transactions.push({ id: c.key, ...c.val() })));
+        const pendingTopups = transactions.filter(t => t.status === 'pending');
+        const pendingPurchases = purchases.filter(p => p.status === 'pending');
+        const allPurchases = [...purchases].sort((a,b)=> (b.created_at||'').localeCompare(a.created_at||''));
+        
+        let content = '';
+        if (currentAdminSection === 'dashboard') {
+            content = `<div class="admin-stats">
+                <div class="stat-card"><div class="stat-number">${Object.keys(users).length}</div><div>Users</div></div>
+                <div class="stat-card"><div class="stat-number">${pendingTopups.length}</div><div>Topup Pending</div></div>
+                <div class="stat-card"><div class="stat-number">${pendingPurchases.length}</div><div>Order Pending</div></div>
+                <div class="stat-card"><div class="stat-number">${purchases.filter(p => p.status === 'approved').length}</div><div>Selesai</div></div>
+                <div class="stat-card"><div class="stat-number">Rp ${purchases.reduce((s,p)=>s+(p.price||0),0).toLocaleString()}</div><div>Omset</div></div>
+            </div>`;
+        }
+        else if (currentAdminSection === 'sendkey') {
+            let sel = `<select id="keyUserSelect" style="margin-bottom:15px;" onchange="loadUserTrans()"><option value="">Pilih User</option>${Object.entries(users).filter(([u]) => u !== 'alfarez').map(([u,ud]) => `<option value="${u}">${u} (Rp ${(ud.balance||0).toLocaleString()})</option>`).join('')}</select><div id="userTransList"></div>`;
+            content = `<div class="card"><h3><i class="fas fa-key"></i> Kirim Key + Set Countdown</h3><p>Pilih user → klik transaksi pending → masukkan key dan tanggal expired</p>${sel}</div>`;
+        }
+        else if (currentAdminSection === 'topup') {
+            content = `<div class="card"><h3>💰 Request Topup (${pendingTopups.length} Pending)</h3>${pendingTopups.length===0?'<p>Tidak ada request topup</p>':pendingTopups.map(t=>`<div style="border:1px solid #2a3448; border-radius:20px; padding:16px; margin:12px 0;"><strong>${t.user_id}</strong><br>Rp ${(t.amount||0).toLocaleString()}<br>${t.note||'-'}<br>Bukti: ${t.proof_image?'<a href="#" onclick="showProof(\''+t.proof_image+'\')">Lihat Bukti</a>':'-'}<br><button onclick="approveTopup(\'${t.id}\',\'${t.user_id}\',${t.amount})">✅ Approve</button><button onclick="rejectTopup(\'${t.id}\')" class="btn-danger">❌ Reject</button></div>`).join('')}</div>`;
+        }
+        else if (currentAdminSection === 'purchases') {
+            content = `<div class="card"><h3>🛒 Pembelian Cheat Pending (${pendingPurchases.length})</h3>${pendingPurchases.length===0?'<p>Tidak ada pembelian pending</p>':pendingPurchases.map(p=>`<div style="border:1px solid #2a3448; border-radius:20px; padding:16px; margin:12px 0;"><strong>${p.product} - ${p.duration}</strong><br>Harga: Rp ${(p.price||0).toLocaleString()}<br>Nama: ${p.name_wa} | No: ${p.phone}<br>Kode Unik: <strong style="color:#00ff88;">${p.random_code}</strong><br><button onclick="approvePurchase('${p.id}')">✅ Approve & Beri Key</button></div>`).join('')}</div>`;
+        }
+        else if (currentAdminSection === 'prices') {
+            let ph = ''; 
+            for (let [prod, durs] of Object.entries(CHEATS)) { 
+                ph += `<div style="margin-bottom:20px;"><h4>${prod}</h4>`; 
+                for (let [dur, pr] of Object.entries(durs)) { 
+                    ph += `<div style="display:flex; gap:10px; margin:8px 0; flex-wrap:wrap;"><span style="width:80px;">${dur}</span><input type="number" id="p_${prod}_${dur}" value="${pr}" style="width:140px;"><button onclick="updatePrice('${prod}','${dur}',document.getElementById('p_${prod}_${dur}').value)">Update</button></div>`; 
+                } 
+                ph += `</div>`; 
+            }
+            content = `<div class="card"><h3>💰 Setting Harga</h3>${ph}</div>`;
+        }
+        else if (currentAdminSection === 'balance') {
+            let balHtml = '<div class="admin-table">\n<table><thead><tr><th>User</th><th>Balance</th><th>Tambah</th><th>Hapus</th></tr></thead><tbody>';
+            for (let [un, u] of Object.entries(users)) {
+                balHtml += `<tr><td>${un} ${u.role==='admin'?'👑':''}</td><td style="color:#00ff88;">Rp ${(u.balance||0).toLocaleString()}</td><td><button onclick="addBal('${un}')">+</button></td><td><button onclick="removeBal('${un}')" class="btn-danger">-</button></td></tr>`;
+            }
+            balHtml += `</tbody></table></div><div style="margin-top:20px;"><h4>Tambah/Hapus Balance Manual</h4><select id="adminUserSelect">${Object.keys(users).map(u=>`<option value="${u}">${u}</option>`)}</select><input type="number" id="adminBalAmount" placeholder="Nominal"><button onclick="adminAddBal()">Tambah</button><button onclick="adminRemoveBal()" class="btn-danger">Hapus Saldo</button></div>`;
+            content = `<div class="card"><h3>💰 Manajemen Saldo</h3>${balHtml}</div>`;
+        }
+        else if (currentAdminSection === 'deleteuser') {
+            let delHtml = '<div class="admin-table">\n<table><thead><tr><th>User</th><th>Balance</th><th>Aksi</th></tr></thead><tbody>';
+            for (let [un, u] of Object.entries(users)) if (un !== 'alfarez') delHtml += `<tr><td>${un}</td><td style="color:#00ff88;">Rp ${(u.balance||0).toLocaleString()}</td><td><button onclick="deleteUser('${un}')" class="btn-danger">🗑 Hapus User</button></td></tr>`;
+            delHtml += `</tbody></table></div>`;
+            content = `<div class="card"><h3>🗑 Hapus User (Permanen)</h3>${delHtml}</div>`;
+        }
+        else if (currentAdminSection === 'resetpassword') {
+            let resetHtml = '<div class="admin-table">\n<table><thead><tr><th>User</th><th>Aksi</th></tr></thead><tbody>';
+            for (let [un, u] of Object.entries(users)) if (un !== 'alfarez') resetHtml += `<tr><td>${un}</td><td><button onclick="resetUserPassword('${un}')">Reset Password (123456)</button></td></tr>`;
+            resetHtml += `</tbody></table></div>`;
+            content = `<div class="card"><h3>🔐 Reset Password User</h3>${resetHtml}</div>`;
+        }
+        else if (currentAdminSection === 'viewuser') {
+            let userHtml = '<div class="admin-table">\n<table><thead><tr><th>User</th><th>Balance</th><th>Role</th><th>Total Belanja</th></tr></thead><tbody>';
+            for (let [un, u] of Object.entries(users)) {
+                const userPurchases = purchases.filter(p => p.user_id === un);
+                const totalSpent = userPurchases.reduce((s,p)=>s+(p.price||0),0);
+                userHtml += `<tr><td>${un} ${u.role==='admin'?'👑':''}</td><td style="color:#00ff88;">Rp ${(u.balance||0).toLocaleString()}</td><td>${u.role}</td><td style="color:#00ff88;">Rp ${totalSpent.toLocaleString()}</td></tr>`;
+            }
+            userHtml += `</tbody></table></div>`;
+            content = `<div class="card"><h3>👥 Detail User Lengkap</h3>${userHtml}</div>`;
+        }
+        else if (currentAdminSection === 'logs') {
+            let logs = ''; 
+            allPurchases.slice(0,30).forEach(p=>{ 
+                logs += `<tr><td style="font-size:12px;">${p.user_id}</td><td style="font-size:12px;">${p.product} ${p.duration}</td><td>Rp ${(p.price||0).toLocaleString()}</td><td class="${p.status==='approved'?'status-approved':'status-pending'}">${p.status}</td><td style="font-size:11px;">${p.created_at?new Date(p.created_at).toLocaleString('id-ID'):'-'}</td></tr>`; 
+            });
+            content = `<div class="card"><h3>📜 Log Aktivitas (30 Terbaru)</h3><div class="admin-table">\n<table><thead><tr><th>User</th><th>Item</th><th>Harga</th><th>Status</th><th>Waktu</th></tr></thead><tbody>${logs}</tbody></table></div></div>`;
+        }
+        else if (currentAdminSection === 'history') {
+            let hist = ''; 
+            allPurchases.forEach(p=>{ 
+                const timeLeft = p.expired_date ? getTimeRemaining(p.expired_date) : { text: '-', class: '' };
+                hist += `<tr><td style="font-size:12px;">${p.user_id}</td><td>${p.product}</td><td>${p.duration}</td><td>Rp ${(p.price||0).toLocaleString()}</td><td class="${p.status==='approved'?'status-approved':'status-pending'}">${p.status}</td><td><span class="key-code" style="font-size:12px;">${p.key_given||'-'}</span></td><td class="${timeLeft.class}">${timeLeft.text}</td><td style="font-size:11px;">${p.created_at?new Date(p.created_at).toLocaleString('id-ID'):'-'}</td></tr>`; 
+            });
+            content = `<div class="card"><h3>📜 Riwayat Semua Pembelian + Countdown</h3><div class="admin-table">\n<table><thead><tr><th>User</th><th>Produk</th><th>Durasi</th><th>Harga</th><th>Status</th><th>Key</th><th>Sisa Waktu</th><th>Waktu Beli</th></tr></thead><tbody>${hist}</tbody></table></div></div>`;
+        }
+        else if (currentAdminSection === 'stats') {
+            const totalOmset = purchases.reduce((s,p)=>s+(p.price||0),0);
+            const totalTopup = transactions.reduce((s,t)=>s+(t.amount||0),0);
+            content = `<div class="admin-stats"><div class="stat-card"><div class="stat-number">Rp ${totalOmset.toLocaleString()}</div><div>Total Omset</div></div><div class="stat-card"><div class="stat-number">Rp ${totalTopup.toLocaleString()}</div><div>Total Topup</div></div><div class="stat-card"><div class="stat-number">${purchases.length}</div><div>Transaksi</div></div></div>`;
+        }
+        else if (currentAdminSection === 'exportdata') {
+            content = `<div class="card"><h3>📊 Export Data</h3><button onclick="exportToExcel()">Export ke Excel (CSV)</button><button onclick="exportToJSON()">Export ke JSON</button></div>`;
+        }
+        else if (currentAdminSection === 'calculator') {
+            content = `<div class="card"><h3><i class="fas fa-calculator"></i> Kalkulator Countdown</h3><div class="date-input-group"><input type="number" id="adminCalcYear" placeholder="Tahun" value="2025"><input type="number" id="adminCalcMonth" placeholder="Bulan" value="12"><input type="number" id="adminCalcDay" placeholder="Tanggal" value="31"><input type="number" id="adminCalcHour" placeholder="Jam" value="23"></div><button onclick="adminCalculateCountdown()">Hitung Sisa Waktu</button><div id="adminCalcResult" style="margin-top:20px; padding:15px; background:#0a101c; border-radius:20px; text-align:center;"></div></div>`;
+        }
+        else if (currentAdminSection === 'broadcast') {
+            content = `<div class="card"><h3><i class="fas fa-broadcast-tower"></i> Broadcast WhatsApp</h3><textarea id="broadcastMsg" rows="4" placeholder="Tulis pesan broadcast..." style="width:100%;"></textarea><button onclick="sendBroadcast()">Kirim Broadcast</button><div id="broadcastResult"></div></div>`;
+        }
+        else if (currentAdminSection === 'announcement') {
+            const ann = (await db.ref('announcement').once('value')).val() || '';
+            content = `<div class="card"><h3>📢 Pengumuman</h3><textarea id="announceText" rows="3" placeholder="Tulis pengumuman..." style="width:100%;"></textarea><button onclick="sendAnnouncement()">Kirim Pengumuman</button><div id="announceDisplay" style="margin-top:15px;">${ann ? `<div class="key-item"><strong>Pengumuman Saat Ini:</strong> ${ann}</div>` : ''}</div></div>`;
+        }
+        else if (currentAdminSection === 'settings') {
+            content = `<div class="card"><h3>⚙️ Pengaturan Umum</h3><label>Minimal Topup: <input type="number" id="minTopup" value="10000"></label><button onclick="saveSettings()">Simpan Pengaturan</button></div>`;
+        }
+        
+        document.getElementById('mainContent').innerHTML = `${renderAdminMenu()}<div class="card" style="margin-top:20px;"><h2><i class="fas fa-crown"></i> Admin Panel</h2><p>Welcome, ${currentUser.username} | Pending Orders: ${pendingCount.purchase} | Pending Topups: ${pendingCount.topup}</p><button onclick="logout()" class="btn-danger">Logout Admin</button></div><div style="max-height:70vh; overflow-y:auto; padding-right:10px;">${content}</div>`;
+    }
+    
+    window.adminCalculateCountdown = function() {
+        const year = document.getElementById('adminCalcYear').value;
+        const month = document.getElementById('adminCalcMonth').value;
+        const day = document.getElementById('adminCalcDay').value;
+        const hour = document.getElementById('adminCalcHour').value;
+        const expiredDate = new Date(year, month-1, day, hour || 23, 59, 59);
+        const result = getTimeRemaining(expiredDate);
+        let color = result.class === 'valid' ? '#00ff88' : (result.class === 'urgent' ? '#ffaa33' : '#ff3366');
+        document.getElementById('adminCalcResult').innerHTML = `<div style="font-size:24px; font-weight:bold; color:${color};">${result.text}</div><div>📅 Expired: ${expiredDate.toLocaleString()}</div>`;
+    };
+    
+    window.sendBroadcast = async function() {
+        const msg = document.getElementById('broadcastMsg').value;
+        if (!msg) { alert("Tulis pesan!"); return; }
+        showToast("Broadcast siap dikirim!");
+        document.getElementById('broadcastResult').innerHTML = `<div class="key-item">✅ Pesan broadcast: "${msg}"</div>`;
+    };
+    
+    window.resetUserPassword = async function(username) {
+        await db.ref(`users/${username}/password`).set('123456');
+        showToast(`Password ${username} direset menjadi 123456`);
+        renderAdminDashboard();
+    };
+    
+    window.exportToExcel = function() {
+        let csv = "User,Produk,Durasi,Harga,Status,Key,Expired,Waktu\n";
+        db.ref('purchases').once('value').then(s => s.forEach(c => {
+            const p = c.val();
+            csv += `"${p.user_id}","${p.product}","${p.duration}",${p.price},"${p.status}","${p.key_given || ''}","${p.expired_date || ''}","${p.created_at || ''}"\n`;
+        })).then(() => {
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'alfarez_export.csv';
+            a.click();
+            showToast("Export berhasil!");
+        });
+    };
+    
+    window.exportToJSON = function() { backupData(); };
+    window.saveSettings = function() { showToast("Pengaturan disimpan!"); };
+    
+    window.loadUserTrans = async function() {
+        const un = document.getElementById('keyUserSelect').value; 
+        if (!un) { document.getElementById('userTransList').innerHTML = ''; return; }
+        const buys = []; 
+        await db.ref('purchases').once('value').then(s=>s.forEach(c=>{const p=c.val(); if(p.user_id===un && p.status==='pending') buys.push({id:c.key,...p});}));
+        if(buys.length===0){ document.getElementById('userTransList').innerHTML='<p>Tidak ada transaksi pending</p>'; return; }
+        let h=''; 
+        buys.forEach(b=>{ 
+            h+=`<div class="transaction-item" style="background:#0a101c; border-radius:18px; padding:14px; margin:10px 0; cursor:pointer; border:1px solid #2a3448;" onclick="selectTrans('${b.id}','${b.product}','${b.duration}')"><strong>${b.product} - ${b.duration}</strong><br>Rp ${(b.price||0).toLocaleString()}<br>Kode: ${b.random_code}<br><span class="timestamp" style="font-size:11px; color:#888;">${b.created_at?new Date(b.created_at).toLocaleString('id-ID'):'-'}</span></div>`; 
+        });
+        document.getElementById('userTransList').innerHTML = h;
+    };
+    
+    window.selectTrans = function(id,prod,dur) {
+        const now = new Date();
+        const defaultYear = now.getFullYear();
+        const defaultMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const defaultDay = String(now.getDate()).padStart(2, '0');
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3><i class="fas fa-key"></i> Kirim Key untuk ${prod} - ${dur}</h3>
+                <input type="text" id="keyInput" placeholder="Masukkan Key (contoh: ABC-123)" style="margin:10px 0;">
+                <h4>Set Tanggal Expired:</h4>
+                <div class="date-input-group">
+                    <input type="number" id="expYear" placeholder="Tahun" value="${defaultYear}">
+                    <input type="number" id="expMonth" placeholder="Bulan" value="${defaultMonth}">
+                    <input type="number" id="expDay" placeholder="Tanggal" value="${defaultDay}">
+                    <input type="number" id="expHour" placeholder="Jam" value="23">
+                </div>
+                <button onclick="sendKeyWithExpiry('${id}')" style="width:100%; margin-top:15px;">✅ Kirim Key</button>
+                <button onclick="closeModal()" class="btn-danger">Batal</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    };
+    
+    window.sendKeyWithExpiry = async function(id) {
+        const key = document.getElementById('keyInput').value.trim();
+        if (!key) { alert("Masukkan Key!"); return; }
+        const year = document.getElementById('expYear').value;
+        const month = document.getElementById('expMonth').value;
+        const day = document.getElementById('expDay').value;
+        const hour = document.getElementById('expHour').value;
+        if (!year || !month || !day) { alert("Isi tanggal expired!"); return; }
+        const expiredDate = new Date(year, month-1, day, hour || 23, 59, 59);
+        if (expiredDate <= new Date()) { alert("Tanggal expired harus lebih besar dari sekarang!"); return; }
+        await db.ref(`purchases/${id}/key_given`).set(key);
+        await db.ref(`purchases/${id}/status`).set('approved');
+        await db.ref(`purchases/${id}/expired_date`).set(expiredDate.toISOString());
+        showToast(`✅ Key "${key}" dikirim! Expired: ${expiredDate.toLocaleString()}`);
+        closeModal();
+        renderAdminDashboard();
+        updatePendingCounts();
+    };
+    
+    window.showProof = function(b64) { 
+        const m=document.createElement('div'); 
+        m.className='modal'; 
+        m.innerHTML=`<div class="modal-content"><img src="${b64}" style="width:100%; border-radius:20px;"><button onclick="this.parentElement.parentElement.remove()">Tutup</button></div>`; 
+        document.body.appendChild(m); 
+    };
+    
+    window.addBal = async function(un) { 
+        let nom=prompt("Nominal tambahan:"); 
+        if(!nom) return; 
+        const snap=await db.ref(`users/${un}/balance`).once('value'); 
+        await db.ref(`users/${un}/balance`).set((snap.val()||0)+parseInt(nom)); 
+        showToast(`Balance ${un} +Rp${parseInt(nom).toLocaleString()}`); 
+        renderAdminDashboard(); 
+    };
+    
+    window.removeBal = async function(un) { 
+        let nom=prompt("Nominal yang akan dihapus:"); 
+        if(!nom) return; 
+        const snap=await db.ref(`users/${un}/balance`).once('value'); 
+        await db.ref(`users/${un}/balance`).set(Math.max(0,(snap.val()||0)-parseInt(nom))); 
+        showToast(`Balance ${un} -Rp${parseInt(nom).toLocaleString()}`); 
+        renderAdminDashboard(); 
+    };
+    
+    window.adminAddBal = async function() { 
+        const un=document.getElementById('adminUserSelect').value; 
+        const nom=parseInt(document.getElementById('adminBalAmount').value); 
+        if(!un||!nom) return alert("Pilih user & nominal"); 
+        const snap=await db.ref(`users/${un}/balance`).once('value'); 
+        await db.ref(`users/${un}/balance`).set((snap.val()||0)+nom); 
+        showToast("Berhasil tambah!"); 
+        renderAdminDashboard(); 
+    };
+    
+    window.adminRemoveBal = async function() { 
+        const un=document.getElementById('adminUserSelect').value; 
+        const nom=parseInt(document.getElementById('adminBalAmount').value); 
+        if(!un||!nom) return alert("Pilih user & nominal"); 
+        const snap=await db.ref(`users/${un}/balance`).once('value'); 
+        await db.ref(`users/${un}/balance`).set(Math.max(0,(snap.val()||0)-nom)); 
+        showToast("Berhasil hapus saldo!"); 
+        renderAdminDashboard(); 
+    };
+    
+    window.deleteUser = async function(un) { 
+        if(confirm(`Hapus user ${un} PERMANEN?`)){ 
+            await db.ref(`users/${un}`).remove(); 
+            showToast(`User ${un} dihapus!`); 
+            renderAdminDashboard(); 
+        } 
+    };
+    
+    window.sendAnnouncement = async function() { 
+        const txt=document.getElementById('announceText').value; 
+        if(txt){ 
+            await db.ref('announcement').set(txt); 
+            showToast("Pengumuman dikirim!"); 
+            renderAdminDashboard(); 
+            loadAnnouncement(); 
+        } 
+    };
+    
+    window.backupData = async function() { 
+        const data=await db.ref('/').once('value'); 
+        const json=JSON.stringify(data.val()); 
+        const blob=new Blob([json],{type:'application/json'}); 
+        const a=document.createElement('a'); 
+        a.href=URL.createObjectURL(blob); 
+        a.download='alfarez_backup.json'; 
+        a.click(); 
+        showToast("Backup berhasil!"); 
+    };
+    
+    window.clearAllData = async function() { 
+        if(confirm("⚠️ HAPUS SEMUA DATA?")){ 
+            await db.ref('/').set(null); 
+            showToast("Semua data dihapus!"); 
+            setTimeout(()=>location.reload(),1500); 
+        } 
+    };
+    
+    window.updatePrice = async function(p,d,np) { 
+        await db.ref(`cheat_prices/${p}/${d}`).set(parseInt(np)); 
+        CHEATS[p][d]=parseInt(np); 
+        showToast(`Harga ${p} - ${d} diupdate`); 
+    };
+    
+    window.approveTopup = async function(id,un,amt) { 
+        await db.ref(`transactions/${id}/status`).set('approved'); 
+        const snap=await db.ref(`users/${un}/balance`).once('value'); 
+        await db.ref(`users/${un}/balance`).set((snap.val()||0)+amt); 
+        showToast("✅ Topup approved!"); 
+        renderAdminDashboard(); 
+        updatePendingCounts(); 
+    };
+    
+    window.rejectTopup = async function(id) { 
+        await db.ref(`transactions/${id}/status`).set('rejected'); 
+        showToast("❌ Topup ditolak"); 
+        renderAdminDashboard(); 
+        updatePendingCounts(); 
+    };
+    
+    window.approvePurchase = async function(id) {
+        const now = new Date();
+        const defaultYear = now.getFullYear();
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>✅ Approve Pembelian</h3>
+                <input type="text" id="keyApprove" placeholder="Masukkan Key">
+                <h4>Set Tanggal Expired:</h4>
+                <div class="date-input-group">
+                    <input type="number" id="expYearApp" placeholder="Tahun" value="${defaultYear}">
+                    <input type="number" id="expMonthApp" placeholder="Bulan" value="12">
+                    <input type="number" id="expDayApp" placeholder="Tanggal" value="31">
+                    <input type="number" id="expHourApp" placeholder="Jam" value="23">
+                </div>
+                <button onclick="confirmApprove('${id}')">✅ Approve & Kirim Key</button>
+                <button onclick="closeModal()" class="btn-danger">Batal</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    };
+    
+    window.confirmApprove = async function(id) {
+        const key = document.getElementById('keyApprove').value.trim();
+        if (!key) { alert("Masukkan Key!"); return; }
+        const year = document.getElementById('expYearApp').value;
+        const month = document.getElementById('expMonthApp').value;
+        const day = document.getElementById('expDayApp').value;
+        const hour = document.getElementById('expHourApp').value;
+        const expiredDate = new Date(year, month-1, day, hour || 23, 59, 59);
+        await db.ref(`purchases/${id}/key_given`).set(key);
+        await db.ref(`purchases/${id}/status`).set('approved');
+        await db.ref(`purchases/${id}/expired_date`).set(expiredDate.toISOString());
+        showToast(`✅ Key "${key}" dikirim!`);
+        closeModal();
+        renderAdminDashboard();
+        updatePendingCounts();
+    };
+    
+    function renderLoginPage() {
+        document.getElementById('mainContent').innerHTML = `<div class="card" style="max-width:480px; margin:40px auto; text-align:center;"><i class="fas fa-user-astronaut" style="font-size:70px; color:#00ff88; margin-bottom:20px;"></i><div class="auth-toggle"><span id="loginTab" class="active" onclick="toggleAuth('login')">Login</span><span id="registerTab" onclick="toggleAuth('register')">Daftar</span></div><div id="loginPanel" class="auth-panel active"><input type="text" id="loginUser" placeholder="Username"><input type="password" id="loginPass" placeholder="Password"><button onclick="login()" style="width:100%;">Login</button></div><div id="registerPanel" class="auth-panel"><input type="text" id="regUser" placeholder="Username"><input type="password" id="regPass" placeholder="Password"><button onclick="register()" style="width:100%;">Buat Akun</button></div></div>`;
+    }
+    
+    window.toggleAuth = function(t) { 
+        document.getElementById('loginTab').classList.toggle('active',t==='login'); 
+        document.getElementById('registerTab').classList.toggle('active',t==='register'); 
+        document.getElementById('loginPanel').classList.toggle('active',t==='login'); 
+        document.getElementById('registerPanel').classList.toggle('active',t==='register'); 
+    };
+    
+    async function register() { 
+        const u = document.getElementById('regUser').value.trim(); 
+        const p = document.getElementById('regPass').value.trim(); 
+        if (!u || !p) return alert("Isi semua!"); 
+        if ((await db.ref(`users/${u}`).once('value')).exists()) return alert("Username sudah dipakai!"); 
+        await db.ref(`users/${u}`).set({ username: u, password: p, balance: 0, role: 'user' }); 
+        showToast("Registrasi berhasil!"); 
+        toggleAuth('login'); 
+    }
+    
+    async function login() { 
+        const u = document.getElementById('loginUser').value.trim(); 
+        const p = document.getElementById('loginPass').value.trim(); 
+        const data = (await db.ref(`users/${u}`).once('value')).val(); 
+        if (!data || data.password !== p) return alert("Username/password salah!"); 
+        currentUser = { username: u, balance: data.balance || 0, role: data.role || 'user' }; 
+        await renderNavbar(); 
+        if (currentUser.role === 'admin') {
+            setupRealtimeListeners();
+            renderAdminDashboard();
+        } else { 
+            renderUserDashboard(); 
+            showDashboard();
+        }
+    }
+    
+    async function logout() { 
+        currentUser = null; 
+        await renderNavbar(); 
+        renderLoginPage(); 
+    }
+    
+    function renderUserDashboard() {
+        let h = ''; 
+        for (let [name, durs] of Object.entries(CHEATS)) { 
+            let items = ''; 
+            for (let [dur, price] of Object.entries(durs)) {
+                items += `<div class="duration-item"><span><i class="fas fa-clock"></i> ${dur}</span><span class="price">Rp ${price.toLocaleString()}</span><div><button onclick="event.stopPropagation(); showBuyForm('${name}','${dur}',${price})">Beli</button><button class="wishlist-btn" onclick="event.stopPropagation(); toggleWishlist('${name}','${dur}',${price},this)"><i class="far fa-heart"></i></button></div></div>`;
+            }
+            h += `<div class="cheat-card" onclick="toggleCheat(this)"><div class="cheat-header"><div><i class="fas fa-gamepad"></i> ${name}</div><i class="fas fa-chevron-down" style="transition:0.3s;"></i></div><div class="cheat-body"><div class="cheat-body-inner">${items}</div></div></div>`;
+        }
+        document.getElementById('mainContent').innerHTML = `<div class="card"><h2>Menu Cheat - Klik kartu untuk lihat harga</h2></div><div class="grid">${h}</div><div id="buyModalContainer"></div>`;
+    }
+    
+    window.toggleCheat = function(el) { 
+        el.classList.toggle('active');
+        const icon = el.querySelector('.fa-chevron-down');
+        if (icon) icon.style.transform = el.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+    };
+    
+    window.showBuyForm = function(p,d,pr) { 
+        if ((currentUser.balance || 0) < pr) return alert("Saldo kurang! Topup dulu."); 
+        document.getElementById('buyModalContainer').innerHTML = `<div class="modal" id="buyModal"><div class="modal-content"><h3>Beli ${p} - ${d}</h3><p>Harga: <strong class="price">Rp ${pr.toLocaleString()}</strong></p><input type="text" id="buyerName" placeholder="Nama lengkap"><input type="tel" id="buyerPhone" placeholder="No WA"><button onclick="confirmBuy('${p}','${d}',${pr})" style="width:100%;">Konfirmasi Pembelian</button><button onclick="closeModal()" class="btn-danger">Batal</button></div></div>`; 
+    };
+    
+    window.confirmBuy = async function(p,d,pr) { 
+        const name = document.getElementById('buyerName').value.trim(); 
+        const phone = document.getElementById('buyerPhone').value.trim(); 
+        if (!name || !phone) return alert("Isi nama dan nomor WA!"); 
+        const rc = Math.floor(100 + Math.random() * 900); 
+        const newBal = currentUser.balance - pr; 
+        await db.ref(`users/${currentUser.username}/balance`).set(newBal); 
+        currentUser.balance = newBal; 
+        
+        // SIMPAN KE PURCHASES - PASTIKAN MASUK
+        const purchaseData = { 
+            user_id: currentUser.username, 
+            product: p, 
+            duration: d, 
+            price: pr, 
+            random_code: rc, 
+            name_wa: name, 
+            phone: phone, 
+            status: 'pending', 
+            created_at: new Date().toISOString() 
+        };
+        console.log("Menyimpan pembelian:", purchaseData);
+        await db.ref('purchases').push().set(purchaseData);
+        
+        showToast(`✅ Pesanan masuk! Kode unik: ${rc}. Menunggu admin approve.`); 
+        closeModal(); 
+        await renderNavbar(); 
+        renderUserDashboard(); 
+        updatePendingCounts();
+    };
+    
+    window.showTopupPage = function() { 
+        selectedPayment = null; 
+        document.getElementById('mainContent').innerHTML = `<div class="card" style="max-width:550px; margin:0 auto;"><h2>Topup Saldo</h2><p>Transfer ke <strong style="color:#00ff88">087760337535</strong> (Admin)</p><div id="paymentOptions">${Object.keys(PAYMENTS).map(m=>`<div class="payment-option" onclick="selectPay('${m}')" data-method="${m}"><i class="fas ${PAYMENTS[m].icon}"></i><div><strong>${m}</strong><br>${PAYMENTS[m].number}</div></div>`).join('')}</div><div id="selectedPayDisplay"></div><div style="display:flex; flex-wrap:wrap; gap:10px;">${[30,50,100,150,200,250,300,350,400].map(n=>`<button onclick="setNom(${n*1000})">Rp${n}k</button>`).join('')}</div><input type="number" id="amountTop" placeholder="Nominal (min 10rb)"><input type="text" id="payerName" placeholder="Nama lengkap"><input type="tel" id="payerPhone" placeholder="No WhatsApp"><input type="file" id="proofImg" accept="image/*"><div id="previewImg"></div><button onclick="sendTopReq()" class="topup-btn" style="width:100%;">Kirim Request Topup</button><button onclick="renderUserDashboard()">Kembali</button></div>`; 
+        document.getElementById('proofImg').onchange = function(e) { const f = e.target.files[0]; if (f) { const r = new FileReader(); r.onload = ev => document.getElementById('previewImg').innerHTML = `<img src="${ev.target.result}" style="max-width:100%; border-radius:16px; margin-top:10px;">`; r.readAsDataURL(f); } }; 
+    };
+    
+    window.selectPay = function(m) { 
+        selectedPayment = m; 
+        document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected')); 
+        document.querySelector(`.payment-option[data-method="${m}"]`).classList.add('selected'); 
+        document.getElementById('selectedPayDisplay').innerHTML = `<div style="background:#00ff8822; padding:12px; border-radius:20px;">Metode: ${m}</div>`; 
+    };
+    
+    window.setNom = function(v) { document.getElementById('amountTop').value = v; };
+    
+    window.sendTopReq = async function() { 
+        if (!selectedPayment) return alert("Pilih metode pembayaran!"); 
+        let amt = parseInt(document.getElementById('amountTop').value); 
+        const name = document.getElementById('payerName').value.trim(); 
+        const phone = document.getElementById('payerPhone').value.trim(); 
+        const file = document.getElementById('proofImg').files[0]; 
+        if (!amt || amt < 10000) return alert("Minimal Rp10.000!"); 
+        if (!name || !phone) return alert("Isi nama & nomor WA!"); 
+        if (!file) return alert("Upload bukti transfer!"); 
+        const reader = new FileReader(); 
+        reader.onload = async function(e) { 
+            await db.ref('transactions').push().set({ 
+                user_id: currentUser.username, 
+                amount: amt, 
+                status: 'pending', 
+                note: `${name} - ${phone} - ${selectedPayment}`, 
+                proof_image: e.target.result, 
+                created_at: new Date().toISOString() 
+            }); 
+            showToast("Request topup terkirim! Menunggu admin approve."); 
+            renderUserDashboard(); 
+            renderNavbar(); 
+            updatePendingCounts();
+        }; 
+        reader.readAsDataURL(file); 
+    };
+    
+    window.showMyKeys = async function() { 
+        const buys = []; 
+        await db.ref('purchases').once('value').then(s => s.forEach(c => { const p = c.val(); if (p.user_id === currentUser.username && p.status === 'approved' && p.key_given) buys.push(p); })); 
+        let h = `<div class="modal" id="keysModal"><div class="modal-content"><h2><i class="fas fa-key"></i> Key Saya + Countdown</h2>`; 
+        if (buys.length === 0) h += `<p style="text-align:center; padding:40px;">Belum ada key yang diberikan admin</p>`; 
+        else buys.forEach(p => { 
+            const timeLeft = getTimeRemaining(p.expired_date); 
+            h += `<div class="key-item"><div><strong>${p.product}</strong> - ${p.duration}<div class="timestamp">Dibeli: ${p.created_at ? new Date(p.created_at).toLocaleString('id-ID') : '-'}</div><div class="countdown ${timeLeft.class}">${timeLeft.text}</div></div><div><span class="key-code">${p.key_given}</span><button class="copy-btn" onclick="copyKey('${p.key_given}')">Salin</button></div></div>`; 
+        }); 
+        h += `<button onclick="closeModal()" class="btn-info">Tutup</button></div></div>`; 
+        document.body.insertAdjacentHTML('beforeend', h); 
+        const ud = document.getElementById('userDropdown'); if (ud) ud.style.display = 'none'; 
+    };
+    
+    window.showHistory = async function() { 
+        const buys = []; 
+        await db.ref('purchases').once('value').then(s => s.forEach(c => { const p = c.val(); if (p.user_id === currentUser.username) buys.push(p); })); 
+        buys.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')); 
+        let h = `<div class="modal" id="historyModal"><div class="modal-content"><h2><i class="fas fa-history"></i> Riwayat Pembelian + Countdown</h2><div class="admin-table">\n<table><thead><tr><th>Produk</th><th>Harga</th><th>Status</th><th>Key</th><th>Sisa Waktu</th><th>Waktu</th><tr></thead><tbody>`; 
+        buys.forEach(p => { 
+            const timeLeft = p.expired_date ? getTimeRemaining(p.expired_date) : { text: '-', class: '' }; 
+            h += `<tr><td style="font-size:13px;">${p.product} ${p.duration}</td><td>Rp ${(p.price || 0).toLocaleString()}</td><td class="${p.status === 'approved' ? 'status-approved' : 'status-pending'}">${p.status === 'approved' ? '✅ Approved' : '⏳ Pending'}</td><td><span class="key-code" style="font-size:12px;">${p.key_given || '-'}</span></td><td class="${timeLeft.class}">${timeLeft.text}</td><td style="font-size:11px;">${p.created_at ? new Date(p.created_at).toLocaleString('id-ID') : '-'}</td></tr>`; 
+        }); 
+        h += `</tbody>}</div><button onclick="closeModal()" class="btn-info">Tutup</button></div></div>`; 
+        document.body.insertAdjacentHTML('beforeend', h); 
+        if (document.getElementById('userDropdown')) document.getElementById('userDropdown').style.display = 'none'; 
+    };
+    
+    window.copyKey = function(t) { navigator.clipboard.writeText(t); showToast("Key disalin!"); };
+    window.closeModal = function() { const m = document.querySelector('.modal'); if (m) m.remove(); };
+    
+    initDB().then(() => { renderLoginPage(); renderNavbar(); });
+</script>
+</body>
+</html>
